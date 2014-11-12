@@ -388,6 +388,7 @@ class MediaWikiFormater:
         markup = self._convertTipBox2(markup)
         markup = self._convertDFText(markup)
         markup = self._convertTile(markup)
+        markup = self._convertTemperature(markup)
 
         return markup
 
@@ -697,6 +698,26 @@ class MediaWikiFormater:
             if counter%2==0:
                 cells = self._unPipe(item) # FIXME: add support for color
                 output += '<span class="Tile">%s</span>' % cells.pop(1)
+            else:
+                output += item
+        return output
+
+    def _convertTemperature(self,markup):
+        '''Convert {{ct|10000}} into 10000 °U with <abbrv> tag with F and C annotations '''
+        counter = 0
+        output = ''
+        for item in self._extractTemplate('ct',markup):
+            counter += 1
+            if counter%2==0:
+                arg = self._unPipe(item)
+                try:
+                    urists = int(arg[1])
+                    c = (urists - 10000.0)*(5.0/9.0)
+                    f = urists - 9968
+                    output += u'<span style="border-bottom: 1px #0000CC dotted;cursor:help;" title="%.1f °C (%d °F)">%d°U</span>' % (c, f, urists)
+                except ValueError:
+                    print 'parsing temperature template failed:' + item
+                    continue
             else:
                 output += item
         return output

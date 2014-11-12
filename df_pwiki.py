@@ -1,6 +1,23 @@
 ﻿#!/usr/bin/python
 # -*- coding: utf-8 -*-
-import os,os.path,UserDict,SimpleHTTPServer,SocketServer,socket,cgi,urlparse,urllib2,webbrowser,tarfile,bz2,sys,traceback,re,mimetypes
+import os
+import os.path
+import UserDict
+import SimpleHTTPServer
+import SocketServer
+import socket
+import cgi
+import urlparse
+import urllib2
+import webbrowser
+import tarfile
+import bz2
+import sys
+import traceback
+import re
+import mimetypes
+import argparse
+
 VERSION='0.0.1 alpha' # 2012-06-15
 '''
 DF Portable Wiki
@@ -66,6 +83,7 @@ TODO:
 '''
 socket.setdefaulttimeout(30)
 
+WIKI = None
 PORT = 8025
 HOSTNAME = socket.gethostname()
 MENU = u'''
@@ -877,7 +895,6 @@ class DfWikiDumpReader:
         return page
 
 
-WIKI = DfWikiDumpReader('DF2014')
 
 class webDispatcher(SimpleHTTPServer.SimpleHTTPRequestHandler):
     ''' This is a very basic webserver capable of dispatching requests. '''
@@ -1046,8 +1063,26 @@ class webDispatcher(SimpleHTTPServer.SimpleHTTPRequestHandler):
             self._respond(500,'Error on server: '+traceback.format_exc())
 
 
-httpd = SocketServer.ThreadingTCPServer(('', PORT), webDispatcher)
-print u"Server listening at http://%s:%s" % (HOSTNAME,PORT)
-webbrowser.open_new_tab("http://%s:%s" % (HOSTNAME,PORT))
-httpd.serve_forever()
+def main():
+    parser = argparse.ArgumentParser(description='Dwarf Fortress Portable Wiki')
+    parser.add_argument('-m', '--media', action='store_true', default=False, help='Download images for offline use')
+    parser.add_argument('-n', '--namespace', default='DF2014', help='set the MediaWiki namespace to use')
+    parser.add_argument('-p', '--port', type=int, default='8025', help='the port to run the webserver on')
+    parser.add_argument('-H', '--hostname', default=socket.gethostname(), help='the hostname to bind the webserver to')
+    args = parser.parse_args()
 
+    global WIKI
+    global PORT
+    global HOSTNAME
+    global MENU
+    WIKI = DfWikiDumpReader(args.namespace)
+    PORT = args.port
+    HOSTNAME = args.hostname
+
+    httpd = SocketServer.ThreadingTCPServer(('', PORT), webDispatcher)
+    print u"Server listening at http://%s:%s" % (HOSTNAME,PORT)
+    webbrowser.open_new_tab("http://%s:%s" % (HOSTNAME,PORT))
+    httpd.serve_forever()
+
+if __name__ == "__main__":
+    main()

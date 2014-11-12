@@ -744,15 +744,16 @@ class DfWikiDumpReader:
         Example: wiki = DfWikiDumpReader()
                  print wiki.pageWikitext('DF2014:Meat')
     '''
-    def __init__(self, primary_namespace):
+    def __init__(self, primary_namespace, dump_file):
         self.pages = {}
         self.primary_namespace = primary_namespace
-        if not os.path.isfile('dump.xml'):
+        self.dump_file = dump_file
+        if not os.path.isfile(self.dump_file):
             print "You need to download the DF Wiki dump (http://dwarffortresswiki.org/images/dump.xml.bz2) and uncompress it."
             sys.exit(1)
         # As the whole DF Wiki dump is roughly 43 Mb, we load it in memory.
-        print "Parsing dump.xml..."
-        file = open('dump.xml','r')
+        print "Parsing dump: %s" % (self.dump_file)
+        file = open(self.dump_file,'r')
         data = file.read(200000000).decode('utf-8') # Limit to 200 Mb
         file.close()
 
@@ -1069,13 +1070,14 @@ def main():
     parser.add_argument('-n', '--namespace', default='DF2014', help='set the MediaWiki namespace to use')
     parser.add_argument('-p', '--port', type=int, default='8025', help='the port to run the webserver on')
     parser.add_argument('-H', '--hostname', default=socket.gethostname(), help='the hostname to bind the webserver to')
+    parser.add_argument('-d', '--dump-file', default='dump.xml', help='the XML dump file to use')
     args = parser.parse_args()
 
     global WIKI
     global PORT
     global HOSTNAME
     global MENU
-    WIKI = DfWikiDumpReader(args.namespace)
+    WIKI = DfWikiDumpReader(args.namespace, args.dump_file)
     PORT = args.port
     HOSTNAME = args.hostname
 

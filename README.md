@@ -38,9 +38,15 @@ information to the offline player.
 
 
 
+## Development
+
+## TODO
+
+See the [Issues](https://github.com/Ramblurr/Dwarf-Fortress-Portable-Wiki/issues) repo for planned features.
+
 ## Dependencies
 
-DFPortableWiki is a pure Python 2.7 program. It does not depend on any other lib than Python standard lib.
+DFPortableWiki is a pure Python 2.7 program. It does not depend on any lib other than the Python standard lib.
 
 ## License & Credit
 

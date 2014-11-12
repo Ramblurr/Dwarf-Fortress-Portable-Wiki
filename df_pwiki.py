@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import os,os.path,UserDict,SimpleHTTPServer,SocketServer,socket,cgi,urlparse,urllib2,webbrowser,tarfile,bz2,sys,traceback,re,mimetypes
 VERSION='0.0.1 alpha' # 2012-06-15
-''' 
+'''
 DF Portable Wiki
 
 This program aims at providing an offline, portable version of Dwarf Fortress wiki.
@@ -26,7 +26,7 @@ Instructions:
   - put dump.xml in the same directory as this program
   - run this program
   - enjoy the local version of DF Wiki on http://localhost:8025/
-  
+
 Q&A:
 
 Q: Why didn't you use a local installation of MediaWiki ?
@@ -53,7 +53,7 @@ TODO:
     {{DFtext|Save Game}}
     {{DFtext|Short|3:1}}
     http://localhost:8025/page?title=Adventurer%20mode
-    
+
     {{Tile|■|7:0:1}} or {{Tile|■|6:0:1}}
     http://localhost:8025/page?title=Adventurer%20mode
 
@@ -104,8 +104,8 @@ padding: 1em;
 }
 .nowiki
 {
-font-family: monospace; 
-white-space: pre; 
+font-family: monospace;
+white-space: pre;
 line-height: 55%;
 }
 #menu {
@@ -115,8 +115,8 @@ position: fixed;
 top:0px;
 border-bottom:2px solid black;
 padding:3px 5px 3px 5px;
-} 
-#content { 
+}
+#content {
 padding: 20px 10px 0px 10px;
 }
 .externalLink {
@@ -151,7 +151,7 @@ clear: right;
 text-align:center;
 padding:5px;
 border-bottom: 1px solid black;
-font-size:120%; 
+font-size:120%;
 color:#ffffff;
 font-weight:bold;
 }
@@ -178,22 +178,22 @@ font-size:8pt;
 font-weight:normal;
 }
 div#pageindex {
-	column-width: 200px;
-	column-gap: 20px;
-	-moz-column-width: 200px;
-	-moz-column-gap: 20px;
+    column-width: 200px;
+    column-gap: 20px;
+    -moz-column-width: 200px;
+    -moz-column-gap: 20px;
     -webkit-column-width: 200px;
-	-webkit-column-gap: 20px;
+    -webkit-column-gap: 20px;
 }
 .mainmenubox {
-	column-count: 2;
-	column-gap: 20px;
-	-moz-column-count: 2;
-	-moz-column-gap: 20px;
+    column-count: 2;
+    column-gap: 20px;
+    -moz-column-count: 2;
+    -moz-column-gap: 20px;
     -webkit-column-count: 2;
-	-webkit-column-gap: 20px;
+    -webkit-column-gap: 20px;
     margin:20px;
-    padding:10px; 
+    padding:10px;
     border:1px solid black;
 }
 #online_article {
@@ -217,7 +217,7 @@ color: #15984D;
 
 def log(message):
     sys.stderr.write((u"###"+message+u"\n").encode('utf-8'))
-        
+
 class tableBuilder:
     ''' A simple HTML table builder.
         Understand MediaWiki cell attributes (cf http://meta.wikimedia.org/wiki/Help:Table)
@@ -234,7 +234,7 @@ class tableBuilder:
         self.cells = []
         self.rows = []
         self.currentCell,self.currentCellStyle=('','')
-        
+
     def addCell(self,content):
         self._endCell()
         if '|' in content:
@@ -242,31 +242,31 @@ class tableBuilder:
             self.currentCellStyle = self.currentCellStyle.replace('&quot;','"')
         else:
             self.currentCell = content
-    
+
     def appendToLastCell(self,content):
         self.currentCell += content
-        
+
     def addHeader(self,content):
         if '|' in content:
             attributes,data = content.split('|')[:2]
             self.cells.append('<th %s>%s</th>'%(attributes.replace('&quot;','"'),data))
         else:
             self.cells.append('<th>%s</th>'%content)
-            
+
     def _endCell(self):
         if self.currentCell=='': return
         if self.currentCellStyle!='':
             self.cells.append('<td %s>%s</td>'%(self.currentCellStyle,self.currentCell))
         else:
-            self.cells.append('<td>%s</td>'%self.currentCell)  
+            self.cells.append('<td>%s</td>'%self.currentCell)
         self.currentCell,self.currentCellStyle=('','')
-            
+
     def endRow(self):
         self._endCell()
         if len(self.cells)>0:
             self.rows.append("".join(self.cells))
         self.cells = []
-        
+
     def endTable(self):
         self.endRow()
         if len(self.rows)>0:
@@ -275,12 +275,12 @@ class tableBuilder:
             return output
         else:
             return ''
-            
+
     def isEmpty(self):
         return len(self.rows)==0 and len(self.cells)==0
 
 class listBuilder:
-    ''' This class ban build HTML output from MediaWiki lists. 
+    ''' This class ban build HTML output from MediaWiki lists.
         Just feed it with all line of a mediaWiki article.
         Supported unordered (*) and ordered (#) lists.
         b = listBuilder()
@@ -298,7 +298,7 @@ class listBuilder:
         self.nesting = [] # Stacks the opened lists (nesting)
         self.output = []
     def addLine(self,content):
-        ''' Add an item to the list. eg. "**#hello" 
+        ''' Add an item to the list. eg. "**#hello"
             cf. http://meta.wikimedia.org/wiki/Help:List
         '''
         (level,type,data) = self._position(content)
@@ -311,17 +311,17 @@ class listBuilder:
             self.output.append('</%s>'%self.nesting.pop()[1]) # Close previous list
             self.nesting.append((level,type))  # Open new list.
             self.output.append('<%s>'%type)
-        if level>0: 
-            if type=='dl':  
+        if level>0:
+            if type=='dl':
                 self.output.append('<dd>%s</dd>'%data)
             else:
                 self.output.append('<li>%s</li>'%data)
         else:
             self.output.append(data)
-            
+
     def htmlOutput(self):
-        return '\n'.join(self.output)  
-        
+        return '\n'.join(self.output)
+
     def _position(self,line):
         ''' Return the nesting level, the type of list and data.
             eg. "**#AAA" --> (3,'ol','AAA')      (because # is an ordered list)
@@ -336,7 +336,7 @@ class listBuilder:
         if s[-1]==':': type='dl'
         return (len(s),type,line[len(s):])
 
-        
+
 class MediaWikiFormater:
     ''' This class is capable of converting MediaWiki markup into HTML.
         It only supports a small subset of MediaWiki markup, and some DFWiki specific features.
@@ -370,7 +370,7 @@ class MediaWikiFormater:
         markup = self._convertTipBox2(markup)
         markup = self._convertDFText(markup)
         markup = self._convertTile(markup)
-        
+
         return markup
 
     def _extractTemplate(self,tag,markup):
@@ -381,8 +381,8 @@ class MediaWikiFormater:
                 >>> data = 'uuuu{{TipBox2aaa{{bb{{cc}}bbb}}kkk}}ddddd{{TipBox2eeee{{ffff}}ggggg}}hhhh'
                 >>> print repr(extractTags('TipBox2',data))
                 ['uuuu', 'aaa{{bb{{cc}}bbb}}kkk', 'ddddd', 'eeee{{ffff}}ggggg', 'hhhh']
-                          ^template content                 ^template content  
-                Even items of NOT template content. Odd items ARE template content.         
+                          ^template content                 ^template content
+                Even items of NOT template content. Odd items ARE template content.
         '''
         splitted = markup.split('{{'+tag)
         items = [splitted[0]]
@@ -413,7 +413,7 @@ class MediaWikiFormater:
             items.append(item[seekpos:])
 
         return items
-        
+
     def _unPipe(self,data):
         ''' Unpipes data taking {{}} and [[]] in consideration.
             >>> print unPipe('aaa|bbbb{{key|c}}dddd|ee{{TTTT{UUU}{{VVV}}}}ee|ooo')
@@ -450,7 +450,7 @@ class MediaWikiFormater:
                 bracketRightCounter += 1
                 if bracketRightCounter==2:
                     inside -= 1
-                    bracketRightCounter = 0                       
+                    bracketRightCounter = 0
             elif c=='|' and inside==0:
                 output.append(currentString)
                 currentString = ''
@@ -459,7 +459,7 @@ class MediaWikiFormater:
         if currentString!='':
             output.append(currentString)
         return output
-    
+
     def _convertLinks(self,markup):
         ''' Markup such as: [[Butcher's shop|butchering]] or [[Meat]] '''
         def rep(m):
@@ -480,7 +480,7 @@ class MediaWikiFormater:
         def rep(m):
             s = m.group(1)
             if not (s.startswith('File:') or s.startswith('Image:')): return m.group(0) # No change.
-            cells = self._unPipe(s) 
+            cells = self._unPipe(s)
             imageName,width,height,float,caption=5*('',)
             # What a mess !  Plenty of attributes, no specific order, and sometimes no naming (direct values)
             # eg: "[[Image:DriedUpPond.png|right|thumb|100px|A diggen out dried up pond, scene of a tragedy.]]"
@@ -499,9 +499,9 @@ class MediaWikiFormater:
                     if width=='': width=cell
                     elif height=='': height=cell
                 elif caption=='': caption=cell
-                
-            if width!='' and not width.endswith('px'): width+='px'  
-            if height!='' and not height.endswith('px'): height+='px'   
+
+            if width!='' and not width.endswith('px'): width+='px'
+            if height!='' and not height.endswith('px'): height+='px'
             if height=='' and width!='': height='auto'
 
             imgStyle=''
@@ -512,8 +512,8 @@ class MediaWikiFormater:
 
             return '<div style="%s"><a href="media?name=%s"><img src="media?name=%s" style="%s"></a><div style="imageCaption"></div></div>' %(divStyle,imageName,imageName,imgStyle)
         m = re.sub(r'\[\[(.+?)\]\]', rep ,markup)
-        return m 
-        
+        return m
+
     def _convertExternalLinks(self,markup):
         ''' Markup such as: [http://en.wikipedia.org/wiki/Rogue_%28computer_game%29 rogue] '''
         def rep(m):
@@ -524,8 +524,8 @@ class MediaWikiFormater:
                 text = match[match.index(' ')+1:]
             return '<a href="%s" class="externalLink">%s</a>' % (url,text)
         m = re.sub(r'\[(http://.+?)\]', rep ,markup)
-        return m  
-        
+        return m
+
     def _convertNewlines(self,markup):
         return markup.replace("\n","<br />\n")
 
@@ -538,17 +538,17 @@ class MediaWikiFormater:
             else:
                 lines.append(line)
         return "\n".join(lines)
-        
+
     def _convertBold(self,markup):
-        """ Bold markup: '''I'm in bold''' 
+        """ Bold markup: '''I'm in bold'''
         """
         def rep(m): return '<b>%s</b>' % m.group(1)
         return re.sub(r"\'\'\'(.+?)\'\'\'", rep,markup)
-        
+
     def _convertItalic(self,markup):
-        ''' Bold markup: ''I'm in italic''     ''' 
+        ''' Bold markup: ''I'm in italic''     '''
         def rep(m): return '<i>%s</i>' % m.group(1)
-        return re.sub(r"\'\'(.+?)\'\'", rep,markup)    
+        return re.sub(r"\'\'(.+?)\'\'", rep,markup)
 
     def _convertPreformated(self,markup):
         ''' Converts preformated texts (line starting with a space). '''
@@ -563,7 +563,7 @@ class MediaWikiFormater:
                     pretext=''
                 lines.append(line)
         return "\n".join(lines)
-        
+
     def _convertTitles(self,markup):
         ''' Markup such as: ==My title=='''
         # ==title1==  -->  <h1>title1</h1>
@@ -577,14 +577,14 @@ class MediaWikiFormater:
                 line = '<h%d>%s</h%d>' % (c,line.strip().strip('='),c)
             lines.append(line)
         return "\n".join(lines)
-    
+
     def _convertLists(self,markup):
         ''' Converts * and # mediawiki lists to html '''
         b = listBuilder()
         for line in markup.split("\n"):
             b.addLine(line)
         return b.htmlOutput()
-        
+
     def _convertTables(self,markup):
         ''' cf. http://meta.wikimedia.org/wiki/Help:Table '''
         lines = []
@@ -602,13 +602,13 @@ class MediaWikiFormater:
                     for cell in line[1:].split('||'):
                         table.addCell(cell)
                 else:
-                    table.addCell(line[1:])      
+                    table.addCell(line[1:])
             elif line.startswith('!'):   # Table header.
                 if '!!' in line:
                     for cell in line[1:].split('!!'):
                         table.addHeader(cell)
                 else:
-                    table.addHeader(line[1:])                  
+                    table.addHeader(line[1:])
             else:
                 if not table.isEmpty():  # If we are in a table.
                     table.appendToLastCell(line)
@@ -617,13 +617,13 @@ class MediaWikiFormater:
         if not table.isEmpty(): lines.append(table.endTable())
         return "\n".join(lines)
 
-        
+
     def _convertKeys(self,markup):
         ''' Convert keys such as: {{K|r}}  {{k|r}} or  {{key|r}} '''
         # eg. http://localhost:8025/page?title=Mining
         def rep(m): return '<kbd>%s</kbd>' % m.group(2)
-        return re.sub(r"\{\{(?i)k(ey)?\|(.+?)\}\}",rep,markup)    
- 
+        return re.sub(r"\{\{(?i)k(ey)?\|(.+?)\}\}",rep,markup)
+
     def _convertTipBox2(self,markup):
         ''' Convert keys such as: {{TipBox2|titlebg=#0a0|float=right|Key Reference|Most of the key commands you will need are noted in the text, but refer to the quick reference guide if you need to look up the key for a particular action.}}'''
         # eg. http://localhost:8025/page?title=cv:Adventure%20mode%20quick%20start
@@ -639,7 +639,7 @@ class MediaWikiFormater:
                 content=''
                 while cells:
                     cell = cells.pop(0)
-                    if cell.startswith('titlebg='): bgcolor=cell[8:] 
+                    if cell.startswith('titlebg='): bgcolor=cell[8:]
                     elif cell.startswith('float='): float=cell.replace('=',':')+';'
                     else:
                         if title=='': title = cell
@@ -652,7 +652,7 @@ class MediaWikiFormater:
                 output += item
         return output
 
-        
+
     def _convertDFText(self,markup):
         ''' Convert keys such as {{DFtext|Save Game}} or {{DFtext|Short|3:1}}
             http://localhost:8025/page?title=Adventurer%20mode'''
@@ -667,8 +667,8 @@ class MediaWikiFormater:
             else:
                 output += item
         return output
-   
-      
+
+
     def _convertTile(self,markup):
         ''' Convert keys such as {{Tile|■|7:0:1}}
             http://localhost:8025/page?title=Adventurer%20mode'''
@@ -694,7 +694,7 @@ class MediaWikiFormater:
                 counter += 1
             markup = output
         return markup
-        
+
     def _convertWorkshops(self,markup):
         ''' Markup specific to DF Wiki:  {{workshop...}} '''
         # FIXME: Re-develop this method using _extractTemplate()
@@ -716,18 +716,19 @@ class MediaWikiFormater:
                     html+='<div class="sectionName">%s</div><div class="sectionData">%s</div>'%(sectionName,sectionData)
             return html+'</div>'
         m = re.sub(re.compile(r'\{\{workshop(.+?)\}\}',re.DOTALL), rep ,markup)
-        return m    
-        # certains workshops ne sont pas convertis correctement : http://localhost:8025/page?title=cv:Bowyer%27s%20workshop        
-    
+        return m
+        # certains workshops ne sont pas convertis correctement : http://localhost:8025/page?title=cv:Bowyer%27s%20workshop
+
 class DfWikiDumpReader:
-    ''' This class is capable of reading a MediaWiki xml dump and return a specified page. 
+    ''' This class is capable of reading a MediaWiki xml dump and return a specified page.
         Tweaked to handle some Dwarf Fortress wiki specificities.
         BEWARE: It loads the whole XML dump in memory.
         Example: wiki = DfWikiDumpReader()
-                 print wiki.pageWikitext('DF2012:Meat')
+                 print wiki.pageWikitext('DF2014:Meat')
     '''
-    def __init__(self):
+    def __init__(self, primary_namespace):
         self.pages = {}
+        self.primary_namespace = primary_namespace
         if not os.path.isfile('dump.xml'):
             print "You need to download the DF Wiki dump (http://dwarffortresswiki.org/images/dump.xml.bz2) and uncompress it."
             sys.exit(1)
@@ -751,13 +752,13 @@ class DfWikiDumpReader:
                 self.pages[title]=text
                 if not text.startswith('#REDIRECT'): pageCount+=1
             else:
-                pass #print "Page skipped:",title # Mostly File: and User: pages.              
+                pass #print "Page skipped:",title # Mostly File: and User: pages.
         print "Done (roughly %d pages found)." % pageCount
         # Uncomment the following line if you want DFPortableWiki to download images.
-        # self._scanMedia()
+        #self._scanMedia()
 
     def _scanMedia(self):
-        ''' Scans the whole XML dump in search for media (File: and Image:) 
+        ''' Scans the whole XML dump in search for media (File: and Image:)
             and downloads them. '''
         sys.stdout.write('Scanning %d pages for media to download...' % len(self.pages))
         if not os.path.isdir('data'): os.mkdir('data')
@@ -772,9 +773,12 @@ class DfWikiDumpReader:
             if '..' in imageName: continue
             filepath = os.path.join('data',imageName)
             if not os.path.isfile(filepath):
-               print (u'Downloading %s...' % imageName).encode('utf-8')  
-               self.downloadImage(imageName)               
-        
+               print (u'Downloading %s...' % imageName).encode('utf-8')
+               self.downloadImage(imageName)
+
+
+    def namespace_prefixed(self, title):
+        return self.primary_namespace + ':' + title
 
     def downloadImage(self,imageName):
         ''' Downloads an image from the Dwarf Fortress Wiki.
@@ -789,12 +793,12 @@ class DfWikiDumpReader:
             html = urllib2.urlopen(url).read(200000)
         except urllib2.HTTPError, e:
             print '    The server couldn\'t fulfill the request '+url
-            print '    Error code: ', e.code  
-            return  
+            print '    Error code: ', e.code
+            return
         except Exception,e:
             print u'    Error downloading %s' % url
             print u'    Error: ', repr(e)
-            return            
+            return
         # Then extract the full image URL from the page:
         # <div class="fullMedia"><a href="/images/0/02/3_dimensions.png" ...
         # Note that the URL can be relative to site root or absolute (http://...)
@@ -810,17 +814,17 @@ class DfWikiDumpReader:
                     image = urllib2.urlopen(fullimageUrl).read(10000000) # 10 Mb max.
                 except urllib2.HTTPError, e:
                     print '    The server couldn\'t fulfill the request '+fullimageUrl
-                    print '    Error code: ', e.code  
+                    print '    Error code: ', e.code
                     return
                 except Exception,e:
                     print u'    Error downloading %s' % fullimageUrl
                     print u'    Error: ', repr(e)
                     return
-                if image: open(filepath,'wb').write(image)    
-                
+                if image: open(filepath,'wb').write(image)
+
     def pageWikitext(self,pageTitle):
         ''' Returns the full Wikitext markup of a page
-            (contained in the <page>...</page> of the XML dump) 
+            (contained in the <page>...</page> of the XML dump)
             pageTitle is case sensitive.
             Handles redirects and some namespaces.
         '''
@@ -840,23 +844,23 @@ class DfWikiDumpReader:
                 # eg. "food" --> "Food"
                 tmptitle = title[0].upper()+title[1:]
                 if tmptitle in self.pages: page = self.pages[tmptitle]
-            if not page: 
-                # Page not found, let's try in the DF2012: namespace
+            if not page:
+                # Page not found, let's try in the primary namespace
                 # eg. "food" --> "DF2012:food"
-                tmptitle = 'DF2012:'+title
+                tmptitle = self.namespace_prefixed(title)
                 if tmptitle in self.pages: page = self.pages[tmptitle]; title=tmptitle
-            if not page: 
-                # Page not found, let's try in the DF2012: namespace AND caps
+            if not page:
+                # Page not found, let's try in the primary: namespace AND caps
                 # eg. "food" --> "DF2012:Food"
-                tmptitle = 'DF2012:'+title[0].upper()+title[1:]
+                tmptitle = self.namespace_prefixed(title[0].upper()+title[1:])
                 if tmptitle in self.pages: page = self.pages[tmptitle]; title=tmptitle
-            if not page: 
+            if not page:
                 # Try name without categories (eg. "Main:Dwarf Fortress:About" --> "About")
                 if ':' in title:
                     tmptitle = title[title.rindex(':')+1:]
                     if tmptitle in self.pages: page = self.pages[tmptitle]; title=tmptitle
         except Exception,e:
-            self._respond(500,'Error on server: '+traceback.format_exc()) 
+            self._respond(500,'Error on server: '+traceback.format_exc())
             return
         if not page: return None  # Page *really* not found.
         # There are stupid redirects in some DFWiki pages.
@@ -867,14 +871,14 @@ class DfWikiDumpReader:
             if len(linksList)==0:  return page  # could not interpret redirect. Display as-is.
             pagename = linksList[0] # Redirected page name
             if pagename.startswith('cv:') or pagename.startswith('CV:'): pagename = pagename[3:]
-            if pagename == title and not pagename.startswith('DF2012:'): # does the page redirect to itself ?
-                pagename = 'DF2012:'+pagename # Try in the DF2012 namespace.
+            if pagename == title and not pagename.startswith(self.primary_namespace): # does the page redirect to itself ?
+                pagename = self.namespace_prefixed(pagename) # Try in the primary namespace.
                 if pagename in self.pages: page = self.pages[pagename]
         return page
 
-   
-WIKI = DfWikiDumpReader()
- 
+
+WIKI = DfWikiDumpReader('DF2014')
+
 class webDispatcher(SimpleHTTPServer.SimpleHTTPRequestHandler):
     ''' This is a very basic webserver capable of dispatching requests. '''
     def _respond(self,httpstatus,data,contentType=None):
@@ -883,7 +887,7 @@ class webDispatcher(SimpleHTTPServer.SimpleHTTPRequestHandler):
             self.send_header("Content-Type",contentType)
         else:
             self.send_header("Content-Type","text/plain")
-        self.send_header('Content-Length',len(data))   
+        self.send_header('Content-Length',len(data))
         self.end_headers()                                # We are done with HTTP headers.
         self.wfile.write(data)
 
@@ -934,9 +938,9 @@ class webDispatcher(SimpleHTTPServer.SimpleHTTPRequestHandler):
         displayTitle = u'Dwarf Fortress portable wiki'
         online = u'<hr><div id="online_article"><a href="http://dwarffortresswiki.org/">View online official Dwarf Fortress wiki</a></div>'
         html = CSS+MENU+online+u'<div id="content"><div id="pagetitle">'+displayTitle+u'</div>'+html+u'</div><br><hr>'
-        self._respond(200,html.encode('utf-8'),'text/html; charset=utf-8')   
+        self._respond(200,html.encode('utf-8'),'text/html; charset=utf-8')
         return
-        
+
     def req_media(self,name):
         ''' Returns a media from the 'data' directory. '''
         name = name[0]
@@ -953,14 +957,14 @@ class webDispatcher(SimpleHTTPServer.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-Type',mtype)
             self.send_header('Content-Length',len(data))
-            self.end_headers() 
+            self.end_headers()
             self.wfile.write(data)
         except Exception,e:
-            self._respond(500,'Error on server: '+traceback.format_exc()) 
-            return        
+            self._respond(500,'Error on server: '+traceback.format_exc())
+            return
         return
-       
-       
+
+
     def req_page(self,title):
         ''' Returns a page of the Wiki '''
         title = title[0] # We take only the first "title" parameter in URL.
@@ -968,21 +972,21 @@ class webDispatcher(SimpleHTTPServer.SimpleHTTPRequestHandler):
         try:
             wikitext = WIKI.pageWikitext(title)
         except Exception,e:
-            self._respond(500,'Error on server: '+traceback.format_exc()) 
+            self._respond(500,'Error on server: '+traceback.format_exc())
             return
         if wikitext=='': self._respond(404,'Not found'); return;
         #open('current_page.txt','w').write(wikitext.encode('utf-8')) # for debug
         html = ''
         try:
-            html = MediaWikiFormater().toHtml(wikitext)  
+            html = MediaWikiFormater().toHtml(wikitext)
         except Exception,e:
-            self._respond(500,'Error on server: '+traceback.format_exc())  
-            return            
+            self._respond(500,'Error on server: '+traceback.format_exc())
+            return
         # We handle redirects:
         if wikitext[:10].upper().startswith('#REDIRECT'):
             linksList = re.findall(r'\[\[(.+?)\]\]',wikitext)
             if len(linksList)==0:  self._respond(404,'Not found'); return;
-            pagename = linksList[0] # Redirected page name        
+            pagename = linksList[0] # Redirected page name
             self.send_response(302)
             self.send_header("Location","?title="+pagename)
             self.end_headers()
@@ -994,7 +998,7 @@ class webDispatcher(SimpleHTTPServer.SimpleHTTPRequestHandler):
         html = CSS+MENU+online+u'<div id="content"><div id="pagetitle">'+displayTitle+u'</div>'+html+u'</div>'
         html += '<br><hr>'
         # FIXME: use a templating system.
-        self._respond(200,html.encode('utf-8'),'text/html; charset=utf-8')          
+        self._respond(200,html.encode('utf-8'),'text/html; charset=utf-8')
 
     def req_pageindex(self):
         ''' Return the whole list of pages, sorted. '''
@@ -1011,19 +1015,19 @@ class webDispatcher(SimpleHTTPServer.SimpleHTTPRequestHandler):
                     pass
                 else:
                     pageNames[pageName]=0
-            
+
             for pageName in sorted(pageNames.keys()):
                 html += '<li><a href="page?title=%s">%s</a></li>' % (pageName,pageName)
             html += '</ul>'
             displayTitle = 'Page index'
             html = MENU+CSS+u'<div id="pagetitle">'+displayTitle+u'</div><div id="pageindex">'+html+u'</div>'
-            self._respond(200,html.encode('utf-8'),'text/html; charset=utf-8')   
+            self._respond(200,html.encode('utf-8'),'text/html; charset=utf-8')
         except Exception,e:
-            self._respond(500,'Error on server: '+traceback.format_exc())  
-            return          
-        
+            self._respond(500,'Error on server: '+traceback.format_exc())
+            return
+
     def do_GET(self):
-        ''' Dispatcher for the HTTP GET requests. 
+        ''' Dispatcher for the HTTP GET requests.
             Maps request name to methods.
             eg. http://localhost:8025/page?title=World generation
             equals: webDispatcher.req_page(title=['World generation'])
@@ -1033,15 +1037,15 @@ class webDispatcher(SimpleHTTPServer.SimpleHTTPRequestHandler):
         if action=="": action="welcome"
         methodname = "req_"+action
         try:
-            getattr(self, methodname)(**params) 
+            getattr(self, methodname)(**params)
         except AttributeError:
             self._respond(404,'Not found')
         except TypeError:  # URL not called with the proper parameters
             self._respond(400,'Bad request')
-        except Exception,e: 
-            self._respond(500,'Error on server: '+traceback.format_exc()) 
+        except Exception,e:
+            self._respond(500,'Error on server: '+traceback.format_exc())
 
-            
+
 httpd = SocketServer.ThreadingTCPServer(('', PORT), webDispatcher)
 print u"Server listening at http://%s:%s" % (HOSTNAME,PORT)
 webbrowser.open_new_tab("http://%s:%s" % (HOSTNAME,PORT))

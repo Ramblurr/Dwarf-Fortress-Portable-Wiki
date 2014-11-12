@@ -704,7 +704,7 @@ class MediaWikiFormater:
     def _removeTemplates(self,markup):
         ''' Removes some templates we do no want to see. '''
         for template in ('quality','Quality','bug','Main page progress bar',
-                         'Quote Box','news'):
+                         'Quote Box','news','Migrated_article'):
             output = ''
             counter = 0
             for item in self._extractTemplate(template,markup):
